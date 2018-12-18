@@ -36,14 +36,15 @@ app.use(route.get('/', async (ctx) => {
 
 app.use(route.post('/auth', async (ctx) => {
   const { email, password } = ctx.request.body
-  const user = await User.findOne({ email }).select('+password')
+  const user = await User.findOne({ email })
+    .select('+password')
   ctx.assert(user, Status.BAD_REQUEST, 'Invalid credentials')
   const isOk = await user.verifyPassword(password)
   ctx.assert(isOk, Status.BAD_REQUEST, 'Invalid credentials')
   ctx.status = Status.CREATED
   ctx.body = {
     token: token.create({
-      uid: user._id,
+      _id: user._id,
       name: user.name,
       issued: (new Date()).toISOString()
     })
@@ -83,14 +84,14 @@ app.use(route.post('/users', async (ctx) => {
   }
 }))
 
-app.use(route.get('/users/:id', async (ctx, id) => {
-  const user = await User.findById(id)
+app.use(route.get('/users/:id', async (ctx, uid) => {
+  const user = await User.findById(uid)
   ctx.assert(user, Status.NOT_FOUND, 'User not found')
   ctx.body = user
 }))
 
-app.use(route.put('/users/:id', async (ctx, id) => {
-  const user = await User.findById(id)
+app.use(route.put('/users/:id', async (ctx, uid) => {
+  const user = await User.findById(uid)
   ctx.assert(user, Status.NOT_FOUND, 'User not found')
   const { name, email, password } = ctx.request.body
   if (name) {
@@ -110,7 +111,13 @@ app.use(route.put('/users/:id', async (ctx, id) => {
   ctx.body = user
 }))
 
-app.use(route.delete('/users/:id', async (ctx, id) => {
+app.use(route.delete('/users/:id', async (ctx, uid) => {
+  const token = ctx.cookies.get('token')
+  const data = token.verify(token)
+  ctx.assert(data, Status.UNAUTHORIZED, 'Invalid token')
+  // De momento sólo un usuario puede borrarse a sí mismo.
+  ctx.assert(data._id === uid, Status.UNAUTHORIZED, 'Invalid user')
+  await User.findByIdAndRemove(uid)
   ctx.status = Status.NO_CONTENT
 }))
 
