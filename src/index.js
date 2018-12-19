@@ -31,15 +31,11 @@ app.use(cors({
 app.use(compress())
 app.use(bodyParser())
 app.use(async (ctx, next) => {
-  const authToken = ctx.cookies.get('token')
+  const authToken = ctx.cookies.get('token') || ctx.headers.Authorization
   if (authToken) {
-    console.log('Auth token', authToken)
     const authData = token.verify(authToken)
-    console.log('Auth data', authData)
     ctx.assert(authData, Status.UNAUTHORIZED, 'Invalid token')
-    console.log('Authorized')
     ctx.state.user = await User.findById(authData._id)
-    console.log('User saved')
   }
   await next()
 })
