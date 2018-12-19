@@ -21,24 +21,21 @@ const TupperSchema = new Schema({
     type: String,
     required: true
   },
-  rations: {
+  servings: {
     type: Number,
     default: 1,
     min: 0,
     max: 128
   },
-  stored: {
+  storedAt: {
     type: String,
     default: TupperStoreDefault,
     enum: TupperStoreEnum
   },
-  duration: {
-    type: Number,
-    default: 1,
-    min: 0,
-    max: 365
+  notifyMeAt: {
+    type: Date
   },
-  cooked: {
+  cookedAt: {
     type: Date
   }
 })
