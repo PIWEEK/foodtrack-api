@@ -12,7 +12,16 @@ const TupperStoreDefault = TupperStore.FRIDGE
 const TupperStoreEnum = [TupperStore.FRIDGE, TupperStore.FREEZER]
 
 const TupperSchema = new Schema({
-  tagId: String,
+  tagId: {
+    type: String,
+    minlength: 8,
+    required: true
+  },
+  tupperId: {
+    type: String,
+    minlength: 1,
+    required: true
+  },
   name: {
     type: String,
     required: true

@@ -31,7 +31,9 @@ app.use(cors({
 app.use(compress())
 app.use(bodyParser())
 app.use(async (ctx, next) => {
-  const authToken = ctx.cookies.get('token') || ctx.headers.Authorization
+  const authToken = ctx.cookies.get('token')
+    || (ctx.headers.Authorization
+      && ctx.headers.Authorization.replace(/Bearer/,''))
   if (authToken) {
     const authData = token.verify(authToken)
     ctx.assert(authData, Status.UNAUTHORIZED, 'Invalid token')
@@ -156,8 +158,9 @@ app.use(route.delete('/users/:id', async (ctx, uid) => {
  */
 app.use(route.post('/tuppers', async (ctx) => {
   ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
-  const { tagId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
+  const { tagId, tupperId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
+  ctx.assert(validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
   ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
   ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
   ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
@@ -237,8 +240,9 @@ app.use(route.get('/fridges/:fid', async (ctx, fid) => {
 
 app.use(route.post('/fridges/:fid/tuppers', async (ctx, fid) => {
   ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
-  const { tagId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
+  const { tagId, tupperId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
+  ctx.assert(validator.isLength(tupperId, { min: 0 }), Status.BAD_REQUEST, 'Invalid tupper id')
   ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
   ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
   ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
