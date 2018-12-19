@@ -15,12 +15,14 @@ const TupperSchema = new Schema({
   tagId: {
     type: String,
     minlength: 8,
-    required: true
+    required: true,
+    unique: true
   },
   tupperId: {
     type: String,
     minlength: 1,
-    required: true
+    required: true,
+    unique: true
   },
   name: {
     type: String,
