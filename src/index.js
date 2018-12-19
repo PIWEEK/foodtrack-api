@@ -163,7 +163,9 @@ app.use(route.post('/tuppers', async (ctx) => {
   ctx.assert(validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
   ctx.assert(validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
   ctx.assert(validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
-  ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
+  if (typeof servings === 'string') {
+    ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
+  }
   ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
   ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
   ctx.assert(validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
