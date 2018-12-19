@@ -351,4 +351,4 @@ app.use(route.delete('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
 }))
 
 const httpServer = http.createServer(app.callback())
-httpServer.listen(3000)
+httpServer.listen(3000, '0.0.0.0')
