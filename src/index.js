@@ -25,7 +25,9 @@ import pkg from '../package.json'
 
 const app = new Koa()
 app.use(helmet())
-app.use(cors())
+app.use(cors({
+  credentials: true
+}))
 app.use(compress())
 app.use(bodyParser())
 app.use(async (ctx, next) => {
