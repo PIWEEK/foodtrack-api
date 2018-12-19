@@ -28,29 +28,54 @@ app.use(helmet())
 app.use(cors())
 app.use(compress())
 app.use(bodyParser())
+app.use(async (ctx, next) => {
+  const authToken = ctx.cookies.get('token')
+  if (authToken) {
+    console.log('Auth token', authToken)
+    const authData = token.verify(authToken)
+    console.log('Auth data', authData)
+    ctx.assert(authData, Status.UNAUTHORIZED, 'Invalid token')
+    console.log('Authorized')
+    ctx.state.user = await User.findById(authData._id)
+    console.log('User saved')
+  }
+  await next()
+})
+
+/**
+ * API root
+ */
 app.use(route.get('/', async (ctx) => {
   ctx.body = {
     version: pkg.version
   }
 }))
 
+/**
+ * Autenticación.
+ */
 app.use(route.post('/auth', async (ctx) => {
   const { email, password } = ctx.request.body
   const user = await User.findOne({ email })
     .select('+password')
-  ctx.assert(user, Status.BAD_REQUEST, 'Invalid credentials')
+  ctx.assert(user, Status.FORBIDDEN, 'Invalid credentials')
   const isOk = await user.verifyPassword(password)
-  ctx.assert(isOk, Status.BAD_REQUEST, 'Invalid credentials')
+  ctx.assert(isOk, Status.FORBIDDEN, 'Invalid credentials')
   ctx.status = Status.CREATED
+  const authToken = token.create({
+    _id: user._id,
+    name: user.name,
+    issued: (new Date()).toISOString()
+  })
+  ctx.cookies.set('token', authToken)
   ctx.body = {
-    token: token.create({
-      _id: user._id,
-      name: user.name,
-      issued: (new Date()).toISOString()
-    })
+    token: authToken
   }
 }))
 
+/**
+ * A partir de aquí tenemos todas las rutas de usuarios.
+ */
 app.use(route.post('/users', async (ctx) => {
   const { name, email, password, fridgeId } = ctx.request.body
   ctx.assert(validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
@@ -65,7 +90,9 @@ app.use(route.post('/users', async (ctx) => {
 
   const savedUser = await newUser.save()
   if (!fridgeId) {
-    const newFridge = new Fridge()
+    const newFridge = new Fridge({
+      users: [savedUser._id]
+    })
     await newFridge.save()
   } else {
     ctx.assert(validator.isMongoId(fridgeId), Status.BAD_REQUEST, 'Invalid fridge id')
@@ -85,12 +112,15 @@ app.use(route.post('/users', async (ctx) => {
 }))
 
 app.use(route.get('/users/:id', async (ctx, uid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
   const user = await User.findById(uid)
   ctx.assert(user, Status.NOT_FOUND, 'User not found')
   ctx.body = user
 }))
 
 app.use(route.put('/users/:id', async (ctx, uid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  ctx.assert(ctx.state.user._id === uid, Status.UNAUTHORIZED)
   const user = await User.findById(uid)
   ctx.assert(user, Status.NOT_FOUND, 'User not found')
   const { name, email, password } = ctx.request.body
@@ -112,6 +142,8 @@ app.use(route.put('/users/:id', async (ctx, uid) => {
 }))
 
 app.use(route.delete('/users/:id', async (ctx, uid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  ctx.assert(ctx.state.user._id === uid, Status.UNAUTHORIZED)
   const token = ctx.cookies.get('token')
   const data = token.verify(token)
   ctx.assert(data, Status.UNAUTHORIZED, 'Invalid token')
@@ -121,17 +153,92 @@ app.use(route.delete('/users/:id', async (ctx, uid) => {
   ctx.status = Status.NO_CONTENT
 }))
 
-app.use(route.get('/fridges', async (ctx) => {
+/**
+ * A partir de aquí están todas las rutas de tuppers.
+ */
+app.use(route.post('/tuppers', async (ctx) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  const { tagId, name, content, rations, stored, duration, cooked } = ctx.request.body
+  ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
+  ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
+  ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
+  ctx.assert(validator.isNumeric(rations, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid rations')
+  ctx.assert(validator.isIn(stored, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid stored value, it must be fridge or freezer')
+  ctx.assert(validator.isNumeric(duration, { min: 0, max: 365 }), Status.BAD_REQUEST, 'Invalid duration')
+  ctx.assert(validator.toDate(cooked), Status.BAD_REQUEST, 'Invalid cooked value')
+  const fridge = await Fridge.findOne({
+    users: [ctx.state.user._id]
+  })
+  ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
+  const newTupper = fridge.tuppers.create({
+    tagId,
+    name,
+    content,
+    rations: parseInt(rations, 10),
+    stored,
+    duration: parseInt(duration, 10),
+    cooked: validator.toDate(cooked)
+  })
+  fridge.tuppers.push(newTupper)
+  await fridge.save()
+  ctx.status = Status.CREATED
+  ctx.body = newTupper
+}))
 
+app.use(route.get('/tuppers', async (ctx) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  const fridge = await Fridge.findOne({
+    users: [ctx.state.user._id]
+  })
+  ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
+  ctx.body = fridge.tuppers
+}))
+
+app.use(route.get('/tuppers/:tid', async (ctx, tid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  const fridge = await Fridge.findOne({
+    users: [ctx.state.user._id]
+  })
+  ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
+  const tupper = fridge.tuppers.id(tid)
+  tupper.remove()
+  await fridge.save()
+  ctx.status = Status.NO_CONTENT
+}))
+
+app.use(route.delete('/tuppers/:tid', async (ctx, tid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  const fridge = await Fridge.findOne({
+    users: [ctx.state.user._id]
+  })
+  ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
+  const tupper = fridge.tuppers.id(tid)
+  tupper.remove()
+  await fridge.save()
+  ctx.status = Status.NO_CONTENT
+}))
+
+/**
+ * A partir de aquí están todas las rutas para trabajar con frigos
+ * y tuppers.
+ */
+app.use(route.get('/fridges', async (ctx) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  const fridges = await Fridge.find({
+    users: [ctx.state.user._id]
+  })
+  ctx.body = fridges
 }))
 
 app.use(route.get('/fridges/:fid', async (ctx, fid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
   const fridge = await Fridge.findById(id)
   ctx.assert(fridge, Status.NOT_FOUND, 'Fridge not found')
   ctx.body = fridge
 }))
 
 app.use(route.post('/fridges/:fid/tuppers', async (ctx, fid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
   const { tagId, name, content, rations, stored, duration, cooked } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
   ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
@@ -142,6 +249,7 @@ app.use(route.post('/fridges/:fid/tuppers', async (ctx, fid) => {
   ctx.assert(validator.toDate(cooked), Status.BAD_REQUEST, 'Invalid cooked value')
   const fridge = await Fridge.findById(id)
   ctx.assert(fridge, Status.NOT_FOUND, 'Fridge not found')
+  ctx.assert(fridge.users.includes(ctx.state.user._id), Status.UNAUTHORIZED)
   fridge.tuppers.push({
     tagId,
     name,
@@ -157,9 +265,11 @@ app.use(route.post('/fridges/:fid/tuppers', async (ctx, fid) => {
 }))
 
 app.use(route.get('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
   const { useTagId } = ctx.request.query
   const fridge = await Fridge.findById(fid)
   ctx.assert(fridge, Status.NOT_FOUND, 'Fridge not found')
+  ctx.assert(fridge.users.includes(ctx.state.user._id), Status.UNAUTHORIZED)
   const tupper = fridge.tuppers.find(useTagId
     ? (tupper) => tupper.tagId === tid
     : (tupper) => tupper._id = tid
@@ -169,9 +279,11 @@ app.use(route.get('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
 }))
 
 app.use(route.put('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
   const { useTagId } = ctx.request.query
   const fridge = await Fridge.findById(fid)
   ctx.assert(fridge, Status.NOT_FOUND, 'Fridge not found')
+  ctx.assert(fridge.users.includes(ctx.state.user._id), Status.UNAUTHORIZED)
   const tupper = fridge.tuppers.find(useTagId ?
     (tupper) => tupper.tagId === tid :
     (tupper) => tupper._id = tid
@@ -219,9 +331,11 @@ app.use(route.put('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
 }))
 
 app.use(route.delete('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
   const { useTagId } = ctx.request.query
   const fridge = await Fridge.findById(fid)
   ctx.assert(fridge, Status.NOT_FOUND, 'Fridge not found')
+  ctx.assert(fridge.users.includes(ctx.state.user._id), Status.UNAUTHORIZED)
   ctx.status = Status.NO_CONTENT
   const tupper = fridge.tuppers.find(useTagId ?
     (tupper) => tupper.tagId === tid :
