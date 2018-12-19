@@ -172,6 +172,7 @@ app.use(route.post('/tuppers', async (ctx) => {
   })
   ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
   const newTupper = fridge.tuppers.create({
+    tupperId,
     tagId,
     name,
     content,
