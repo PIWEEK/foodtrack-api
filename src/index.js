@@ -161,8 +161,8 @@ app.use(route.post('/tuppers', async (ctx) => {
   const { tagId, tupperId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
   ctx.assert(validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
-  ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
-  ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
+  ctx.assert(validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
+  ctx.assert(validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
   ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
   ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
   ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
@@ -243,8 +243,8 @@ app.use(route.post('/fridges/:fid/tuppers', async (ctx, fid) => {
   const { tagId, tupperId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
   ctx.assert(validator.isLength(tupperId, { min: 0 }), Status.BAD_REQUEST, 'Invalid tupper id')
-  ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
-  ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
+  ctx.assert(validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
+  ctx.assert(validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
   ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
   ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
   ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
@@ -293,8 +293,8 @@ app.use(route.put('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
   ctx.assert(tupper, Status.NOT_FOUND, 'Tupper not found')
   const { tagId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
-  ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
-  ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
+  ctx.assert(validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
+  ctx.assert(validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
   ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
   ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
   ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
