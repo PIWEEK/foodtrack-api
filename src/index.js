@@ -158,14 +158,14 @@ app.use(route.delete('/users/:id', async (ctx, uid) => {
  */
 app.use(route.post('/tuppers', async (ctx) => {
   ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
-  const { tagId, name, content, rations, stored, duration, cooked } = ctx.request.body
+  const { tagId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
   ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
   ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
-  ctx.assert(validator.isNumeric(rations, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid rations')
-  ctx.assert(validator.isIn(stored, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid stored value, it must be fridge or freezer')
-  ctx.assert(validator.isNumeric(duration, { min: 0, max: 365 }), Status.BAD_REQUEST, 'Invalid duration')
-  ctx.assert(validator.toDate(cooked), Status.BAD_REQUEST, 'Invalid cooked value')
+  ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
+  ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
+  ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
+  ctx.assert(validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
   const fridge = await Fridge.findOne({
     users: [ctx.state.user._id]
   })
@@ -174,10 +174,10 @@ app.use(route.post('/tuppers', async (ctx) => {
     tagId,
     name,
     content,
-    rations: parseInt(rations, 10),
-    stored,
-    duration: parseInt(duration, 10),
-    cooked: validator.toDate(cooked)
+    servings: parseInt(servings, 10),
+    storedAt,
+    notifyMeAt: validator.toDate(notifyMeAt),
+    cookedAt: validator.toDate(cookedAt)
   })
   fridge.tuppers.push(newTupper)
   await fridge.save()
@@ -239,14 +239,14 @@ app.use(route.get('/fridges/:fid', async (ctx, fid) => {
 
 app.use(route.post('/fridges/:fid/tuppers', async (ctx, fid) => {
   ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
-  const { tagId, name, content, rations, stored, duration, cooked } = ctx.request.body
+  const { tagId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
   ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
   ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
-  ctx.assert(validator.isNumeric(rations, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid rations')
-  ctx.assert(validator.isIn(stored, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid stored value, it must be fridge or freezer')
-  ctx.assert(validator.isNumeric(duration, { min: 0, max: 365 }), Status.BAD_REQUEST, 'Invalid duration')
-  ctx.assert(validator.toDate(cooked), Status.BAD_REQUEST, 'Invalid cooked value')
+  ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
+  ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
+  ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
+  ctx.assert(validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
   const fridge = await Fridge.findById(id)
   ctx.assert(fridge, Status.NOT_FOUND, 'Fridge not found')
   ctx.assert(fridge.users.includes(ctx.state.user._id), Status.UNAUTHORIZED)
@@ -254,10 +254,10 @@ app.use(route.post('/fridges/:fid/tuppers', async (ctx, fid) => {
     tagId,
     name,
     content,
-    rations: parseInt(rations, 10),
-    stored,
-    duration: parseInt(duration, 10),
-    cooked: validator.toDate(cooked)
+    servings: parseInt(servings, 10),
+    storedAt,
+    notifyMeAt: validator.toDate(notifyMeAt),
+    cookedAt: validator.toDate(cookedAt)
   })
   const savedFridge = fridge.save()
   ctx.status = Status.CREATED
@@ -289,14 +289,14 @@ app.use(route.put('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
     (tupper) => tupper._id = tid
   )
   ctx.assert(tupper, Status.NOT_FOUND, 'Tupper not found')
-  const { tagId, name, content, rations, stored, duration, cooked } = ctx.request.body
+  const { tagId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
   ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
   ctx.assert(validator.isLength(name, { min: 8 }), Status.BAD_REQUEST, 'Invalid name')
   ctx.assert(validator.isLength(content, { min: 8 }), Status.BAD_REQUEST, 'Invalid content')
-  ctx.assert(validator.isNumeric(rations, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid rations')
-  ctx.assert(validator.isIn(stored, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid stored value, it must be fridge or freezer')
-  ctx.assert(validator.isNumeric(duration, { min: 0, max: 365 }), Status.BAD_REQUEST, 'Invalid duration')
-  ctx.assert(validator.toDate(cooked), Status.BAD_REQUEST, 'Invalid cooked value')
+  ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
+  ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
+  ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
+  ctx.assert(validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
   if (tagId) {
     tupper.tagId = tagId
   }
@@ -309,20 +309,20 @@ app.use(route.put('/fridges/:fid/tuppers/:tid', async (ctx, fid, tid) => {
     tupper.content = content
   }
 
-  if (rations) {
-    tupper.rations = parseInt(rations, 10)
+  if (servings) {
+    tupper.servings = parseInt(servings, 10)
   }
 
-  if (stored) {
-    tupper.stored = stored
+  if (storedAt) {
+    tupper.storedAt = storedAt
   }
 
-  if (duration) {
-    tupper.duration = parseInt(duration, 365)
+  if (notifyMeAt) {
+    tupper.notifyMeAt = validator.toDate(notifyMeAt)
   }
 
-  if (cooked) {
-    tupper.cooked = validator.toDate(cooked)
+  if (cookedAt) {
+    tupper.cookedAt = validator.toDate(cookedAt)
   }
 
   const savedFridge = await fridge.save()
