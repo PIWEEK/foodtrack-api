@@ -14,7 +14,7 @@ import Fridge from './db/models/Fridge'
 
 import token from './token'
 
-mongoose.connect('mongodb://localhost:27017/foodtrack', {
+mongoose.connect(process.env.MONGODB || 'mongodb://localhost:27017/foodtrack', {
   useCreateIndex: true,
   useNewUrlParser: true
 }).then(() => {

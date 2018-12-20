@@ -2,8 +2,11 @@ import crypto from 'crypto'
 import util from 'util'
 
 const randomBytes = util.promisify(crypto.randomBytes)
-const scrypt = util.promisify(crypto.scrypt)
+const pbkdf2 = util.promisify(crypto.pbkdf2)
+// Esto parece que no le gusta a Now.sh
+//const scrypt = util.promisify(crypto.scrypt)
 
+const ITERATIONS = 10000
 const SALT_LENGTH = 128
 const KEY_LENGTH = 128
 const SEPARATOR = ':'
@@ -25,7 +28,7 @@ export function createSalt(length = SALT_LENGTH) {
  */
 export async function hash(password, salt) {
   const usedSalt = !salt ? await createSalt() : salt
-  const derivedKey = await scrypt(password, usedSalt, KEY_LENGTH)
+  const derivedKey = await pbkdf2(password, usedSalt, ITERATIONS, KEY_LENGTH, 'sha512')
   return `${derivedKey.toString('base64')}${SEPARATOR}${usedSalt.toString('base64')}`
 }
 
