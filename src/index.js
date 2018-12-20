@@ -159,16 +159,16 @@ app.use(route.delete('/users/:id', async (ctx, uid) => {
 app.use(route.post('/tuppers', async (ctx) => {
   ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
   const { tagId, tupperId, name, content, servings, storedAt, notifyMeAt, cookedAt } = ctx.request.body
-  ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
-  ctx.assert(validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
-  ctx.assert(validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
-  ctx.assert(validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
+  ctx.assert(tagId && validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
+  ctx.assert(tupperId && validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
+  ctx.assert(name && validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
+  ctx.assert(content && validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
   if (typeof servings === 'string') {
-    ctx.assert(validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
+    ctx.assert(servings && validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
   }
-  ctx.assert(validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
-  ctx.assert(validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
-  ctx.assert(validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
+  ctx.assert(storedAt && validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
+  ctx.assert(notifyMeAt && validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
+  ctx.assert(cookedAt && validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
   const fridge = await Fridge.findOne({
     users: [ctx.state.user._id]
   })
@@ -206,6 +206,74 @@ app.use(route.get('/tuppers/:tid', async (ctx, tid) => {
   ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
   const tupper = fridge.tuppers.id(tid)
   tupper.remove()
+  await fridge.save()
+  ctx.status = Status.NO_CONTENT
+}))
+
+app.use(route.put('/tuppers/:tid', async (ctx, tid) => {
+  ctx.assert(ctx.state.user, Status.UNAUTHORIZED, 'Invalid auth token')
+  const fridge = await Fridge.findOne({
+    users: [ctx.state.user._id]
+  })
+  ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
+  const tupper = fridge.tuppers.id(tid)
+  const {
+    tagId,
+    tupperId,
+    name,
+    content,
+    servings,
+    storedAt,
+    notifyMeAt,
+    cookedAt
+  } = ctx.request.body
+  ctx.assert(tagId && validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
+  ctx.assert(tupperId && validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
+  ctx.assert(name && validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
+  ctx.assert(content && validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
+  if (typeof servings === 'string') {
+    ctx.assert(servings && validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
+  }
+  ctx.assert(storedAt && validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
+  ctx.assert(notifyMeAt && validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
+  ctx.assert(cookedAt && validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
+  if (tagId) {
+    tupper.tagId = tagId
+  }
+  if (tupperId) {
+    tupper.tupperId = tupperId
+  }
+  if (name) {
+    tupper.name = name
+  }
+  if (content) {
+    tupper.content = content
+  }
+  if (storedAt) {
+    tupper.storedAt = storedAt
+  }
+  if (notifyMeAt) {
+    tupper.notifyMeAt = validator.toDate(notifyMeAt)
+  }
+  if (cookedAt) {
+    tupper.cookedAt = validator.toDate(cookedAt)
+  }
+  if (servings) {
+    // Si el valor de servings es negativo, entonces lo que hacemos
+    // es restar tantos como hayamos indicado.
+    if (servings < 0) {
+      tupper.servings = Math.max(0, tupper.servings - servings)
+    } else {
+      tupper.servings = servings
+    }
+
+    // TODO: Podemos crear un histórico si en este caso convertimos
+    // el tupper a un histórico de tuppers.
+    // Borramos el tupper si el número de servings es 0.
+    if (tupper.servings === 0) {
+      tupper.remove()
+    }
+  }
   await fridge.save()
   ctx.status = Status.NO_CONTENT
 }))
