@@ -204,10 +204,12 @@ app.use(route.get('/tuppers/:tid', async (ctx, tid) => {
     users: [ctx.state.user._id]
   })
   ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
+  console.log(fridge)
   const tupper = fridge.tuppers.id(tid)
-  tupper.remove()
+  console.log(tupper)
+  ctx.assert(tupper, Status.NOT_FOUND, 'User does not have that tupper')
   await fridge.save()
-  ctx.status = Status.NO_CONTENT
+  ctx.body = tupper
 }))
 
 app.use(route.put('/tuppers/:tid', async (ctx, tid) => {
@@ -217,6 +219,7 @@ app.use(route.put('/tuppers/:tid', async (ctx, tid) => {
   })
   ctx.assert(fridge, Status.NOT_FOUND, 'User does not have a fridge')
   const tupper = fridge.tuppers.id(tid)
+  ctx.assert(tupper, Status.NOT_FOUND, 'User does not have that tupper')
   const {
     tagId,
     tupperId,
@@ -227,42 +230,45 @@ app.use(route.put('/tuppers/:tid', async (ctx, tid) => {
     notifyMeAt,
     cookedAt
   } = ctx.request.body
-  ctx.assert(tagId && validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
-  ctx.assert(tupperId && validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
-  ctx.assert(name && validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
-  ctx.assert(content && validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
-  if (typeof servings === 'string') {
-    ctx.assert(servings && validator.isNumeric(servings, { min: 0, max: 128 }), Status.BAD_REQUEST, 'Invalid servings')
-  }
-  ctx.assert(storedAt && validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
-  ctx.assert(notifyMeAt && validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
-  ctx.assert(cookedAt && validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
   if (tagId) {
+    ctx.assert(validator.isLength(tagId, { min: 8 }), Status.BAD_REQUEST, 'Invalid tag id')
     tupper.tagId = tagId
   }
   if (tupperId) {
+    ctx.assert(tupperId && validator.isLength(tupperId, { min: 1 }), Status.BAD_REQUEST, 'Invalid tupper id')
     tupper.tupperId = tupperId
   }
   if (name) {
+    ctx.assert(name && validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
     tupper.name = name
   }
   if (content) {
+    ctx.assert(content && validator.isLength(content, { min: 1 }), Status.BAD_REQUEST, 'Invalid content')
     tupper.content = content
   }
   if (storedAt) {
+    ctx.assert(storedAt && validator.isIn(storedAt, ['fridge', 'freezer']), Status.BAD_REQUEST, 'Invalid storedAt value, it must be fridge or freezer')
     tupper.storedAt = storedAt
   }
   if (notifyMeAt) {
+    ctx.assert(notifyMeAt && validator.toDate(notifyMeAt), Status.BAD_REQUEST, 'Invalid notifyMeAt value')
     tupper.notifyMeAt = validator.toDate(notifyMeAt)
   }
   if (cookedAt) {
+    ctx.assert(cookedAt && validator.toDate(cookedAt), Status.BAD_REQUEST, 'Invalid cookedAt value')
     tupper.cookedAt = validator.toDate(cookedAt)
   }
-  if (servings) {
+  if (servings !== undefined) {
+    if (typeof servings === 'string') {
+      ctx.assert(servings && validator.isNumeric(servings, {
+        min: 0,
+        max: 128
+      }), Status.BAD_REQUEST, 'Invalid servings')
+    }
     // Si el valor de servings es negativo, entonces lo que hacemos
     // es restar tantos como hayamos indicado.
     if (servings < 0) {
-      tupper.servings = Math.max(0, tupper.servings - servings)
+      tupper.servings = Math.max(0, tupper.servings + servings)
     } else {
       tupper.servings = servings
     }
@@ -275,7 +281,12 @@ app.use(route.put('/tuppers/:tid', async (ctx, tid) => {
     }
   }
   await fridge.save()
-  ctx.status = Status.NO_CONTENT
+  if (tupper.servings) {
+    ctx.status = Status.ACCEPTED
+    ctx.body = tupper
+  } else {
+    ctx.status = Status.NO_CONTENT
+  }
 }))
 
 app.use(route.delete('/tuppers/:tid', async (ctx, tid) => {
