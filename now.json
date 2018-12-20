@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "env": {
+    "FOODTRACK_API": "NOW"
+  },
   "builds": [
     {
       "src": "dist/index.js",
