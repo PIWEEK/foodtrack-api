@@ -1,7 +1,8 @@
 {
   "version": 2,
   "env": {
-    "FOODTRACK_API": "NOW"
+    "FOODTRACK_API": "NOW",
+    "MONGODB": "@db"
   },
   "builds": [
     {

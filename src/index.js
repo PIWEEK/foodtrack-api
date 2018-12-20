@@ -78,9 +78,9 @@ app.use(route.post('/auth', async (ctx) => {
  */
 app.use(route.post('/users', async (ctx) => {
   const { name, email, password, fridgeId } = ctx.request.body
-  ctx.assert(validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
-  ctx.assert(validator.isEmail(email), Status.BAD_REQUEST, 'Invalid e-mail')
-  ctx.assert(validator.isLength(password, { min: 8 }), Status.BAD_REQUEST, 'Invalid password')
+  ctx.assert(name && validator.isLength(name, { min: 1 }), Status.BAD_REQUEST, 'Invalid name')
+  ctx.assert(email && validator.isEmail(email), Status.BAD_REQUEST, 'Invalid e-mail')
+  ctx.assert(password && validator.isLength(password, { min: 8 }), Status.BAD_REQUEST, 'Invalid password')
 
   const newUser = new User({
     name,
