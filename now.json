@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "name": "foodtrack-api",
+  "alias": "foodtrack-api",
   "env": {
     "FOODTRACK_API": "NOW",
     "MONGODB": "@db"
@@ -12,7 +14,15 @@
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/.*",
+      "dest": "/dist/index.js"
+    },
+    {
+      "src": "/tuppers/.*",
+      "dest": "/dist/index.js"
+    },
+    {
+      "src": "/users/.*",
       "dest": "/dist/index.js"
     }
   ]
